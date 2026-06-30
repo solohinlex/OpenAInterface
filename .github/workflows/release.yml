@@ -41,23 +41,25 @@ jobs:
         run: python build.py
 
       - name: List dist contents
+        shell: bash
         run: ls -la dist/
 
       - name: Package artifact
+        shell: bash
         run: |
-          python -c "
-          import shutil
-          import os
-          format = '${{ matrix.archive_format }}'
-          name = '${{ matrix.artifact_name }}'
-          # PyInstaller creates a directory with the app name
-          src = os.path.join('dist', 'OpenAInterface')
-          if format == 'zip':
-              shutil.make_archive(name, 'zip', 'dist', 'OpenAInterface')
-          else:
-              shutil.make_archive(name, 'gztar', 'dist', 'OpenAInterface')
-          print(f'Created: {name}.{format}')
-          "
+          cd dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # On Windows, PyInstaller creates an .exe file, use Python for zip
+            python -c "
+            import zipfile
+            with zipfile.ZipFile('${{ matrix.artifact_name }}.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+                z.write('OpenAInterface.exe')
+            "
+          else
+            # On Linux/Mac, PyInstaller creates a directory
+            tar -czf "${{ matrix.artifact_name }}.tar.gz" OpenAInterface/
+          fi
+          mv "${{ matrix.artifact_name }}".*${{ matrix.archive_format }} ../
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
