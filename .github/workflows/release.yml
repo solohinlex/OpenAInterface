@@ -49,14 +49,8 @@ jobs:
         run: |
           cd dist
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # On Windows, PyInstaller creates an .exe file, use Python for zip
-            python -c "
-            import zipfile
-            with zipfile.ZipFile('${{ matrix.artifact_name }}.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-                z.write('OpenAInterface.exe')
-            "
+            7z a "${{ matrix.artifact_name }}.zip" OpenAInterface.exe
           else
-            # On Linux/Mac, PyInstaller creates a directory
             tar -czf "${{ matrix.artifact_name }}.tar.gz" OpenAInterface/
           fi
           mv "${{ matrix.artifact_name }}".*${{ matrix.archive_format }} ../
