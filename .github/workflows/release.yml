@@ -45,7 +45,7 @@ jobs:
         run: |
           cd dist
           if [ "${{ matrix.archive_format }}" = "zip" ]; then
-            zip -r "${{ matrix.artifact_name }}.zip" OpenAInterface/
+            7z a "${{ matrix.artifact_name }}.zip" OpenAInterface/
           else
             tar -czf "${{ matrix.artifact_name }}.tar.gz" OpenAInterface/
           fi
