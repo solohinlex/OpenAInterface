@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAInterface</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --bg-message-user: #1e3a5f;
+            --bg-message-ai: #1a2744;
+            --text-primary: #e4e4e4;
+            --text-secondary: #a0a0a0;
+            --accent: #4fc3f7;
+            --accent-hover: #81d4fa;
+            --border: #2a2a4a;
+            --danger: #ef5350;
+            --success: #66bb6a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Боковая панель */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h2 {
+            font-size: 16px;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 10px 16px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .new-chat-btn:hover { background: var(--accent-hover); }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conv-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .conv-item:hover { background: var(--bg-tertiary); }
+        .conv-item.active { background: var(--bg-tertiary); border-left: 3px solid var(--accent); }
+
+        .conv-title {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .conv-delete {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.2s, color 0.2s;
+        }
+
+        .conv-item:hover .conv-delete { opacity: 1; }
+        .conv-delete:hover { color: var(--danger); }
+
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .ssh-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .status-dot.connected { background: var(--success); }
+
+        .ssh-select {
+            width: 100%;
+            padding: 6px 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        .ssh-btn {
+            width: 100%;
+            padding: 6px;
+            margin-top: 6px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .ssh-btn.connect { background: var(--success); color: #fff; }
+        .ssh-btn.disconnect { background: var(--danger); color: #fff; }
+
+        .ssh-settings-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 100%;
+            padding: 6px;
+            margin-top: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .ssh-settings-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Основная область */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .main-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .active-ssh-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--success);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--success);
+        }
+
+        .active-ssh-badge .status-dot {
+            width: 6px;
+            height: 6px;
+        }
+
+        .ssh-switch-select {
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .profile-select {
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* Область сообщений */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar { background: var(--bg-tertiary); color: var(--accent); }
+        .message.assistant .message-avatar { background: var(--accent); color: #000; }
+
+        .message-content {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message.user .message-content { background: var(--bg-message-user); }
+        .message.assistant .message-content { background: var(--bg-message-ai); }
+
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+
+        .welcome i {
+            font-size: 48px;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .welcome h3 { font-size: 20px; margin-bottom: 8px; }
+        .welcome p { font-size: 14px; }
+
+        /* Область ввода */
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper:focus-within { border-color: var(--accent); }
+
+        .input-wrapper textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+
+        .send-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+            align-self: flex-end;
+        }
+
+        .send-btn:hover { background: var(--accent-hover); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            width: 480px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 { margin-bottom: 16px; color: var(--accent); }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .form-group textarea { min-height: 80px; resize: vertical; }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-danger { background: var(--danger); color: #fff; }
+
+        /* Скроллбар */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--bg-tertiary); }
+    </style>
+</head>
+<body>
+<div id="app">
+    <!-- Боковая панель -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-bolt"></i> OpenAInterface</h2>
+            <button class="new-chat-btn" @click="newConversation">
+                <i class="fas fa-plus"></i> Новый диалог
+            </button>
+        </div>
+
+        <div class="conversations-list">
+            <div
+                v-for="conv in conversations"
+                :key="conv.id"
+                class="conv-item"
+                :class="{ active: currentConvId === conv.id }"
+                @click="selectConversation(conv.id)"
+            >
+                <span class="conv-title">{{ conv.title }}</span>
+                <button class="conv-delete" @click.stop="deleteConversation(conv.id)" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="ssh-status">
+                <span class="status-dot" :class="{ connected: sshConnected }"></span>
+                <span>{{ sshConnected ? 'Подключено' : 'Не подключено' }}</span>
+            </div>
+            <select class="ssh-select" v-model="selectedPreset">
+                <option v-for="p in sshPresets" :key="p.id" :value="p.id">
+                    {{ p.name }}
+                </option>
+            </select>
+            <button
+                class="ssh-btn"
+                :class="sshConnected ? 'disconnect' : 'connect'"
+                @click="toggleSSH"
+            >
+                {{ sshConnected ? 'Отключить' : 'Подключить' }}
+            </button>
+            <button class="ssh-settings-btn" @click="showSshPresetModal = true">
+                <i class="fas fa-cog"></i> Настроить пресеты
+            </button>
+        </div>
+    </div>
+
+    <!-- Основная область -->
+    <div class="main">
+        <div class="main-header">
+            <!-- SSH статус и переключение -->
+            <template v-if="sshConnected">
+                <span class="active-ssh-badge">
+                    <span class="status-dot connected"></span>
+                    {{ activePresetName }}
+                </span>
+                <select class="ssh-switch-select" v-model="selectedPreset" @change="switchPreset">
+                    <option v-for="p in sshPresets" :key="p.id" :value="p.id">
+                        {{ p.name }}
+                    </option>
+                </select>
+            </template>
+
+            <select class="profile-select" v-model="currentProfile">
+                <option v-for="p in profiles" :key="p.id" :value="p.id">
+                    {{ p.name }}
+                </option>
+            </select>
+
+            <div class="header-actions">
+                <button class="icon-btn" @click="showProfileModal = true" title="Настроить профиль">
+                    <i class="fas fa-user-cog"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="messages" ref="messagesContainer">
+            <div v-if="messages.length === 0" class="welcome">
+                <i class="fas fa-comments"></i>
+                <h3>Добро пожаловать!</h3>
+                <p>Отправьте сообщение, чтобы начать диалог</p>
+            </div>
+
+            <div
+                v-for="msg in messages"
+                :key="msg.id"
+                class="message"
+                :class="msg.role"
+            >
+                <div class="message-avatar">
+                    <i :class="msg.role === 'user' ? 'fas fa-user' : 'fas fa-robot'"></i>
+                </div>
+                <div class="message-content">{{ msg.content }}</div>
+            </div>
+
+            <div v-if="isTyping" class="message assistant">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea
+                    v-model="newMessage"
+                    @keydown.enter.exact.prevent="sendMessage"
+                    placeholder="Введите сообщение..."
+                    :disabled="isTyping"
+                    rows="1"
+                ></textarea>
+                <button class="send-btn" @click="sendMessage" :disabled="isTyping || !newMessage.trim()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно SSH-пресетов -->
+    <div class="modal-overlay" v-if="showSshPresetModal" @click.self="showSshPresetModal = false">
+        <div class="modal">
+            <h3>
+                <i class="fas fa-server"></i>
+                {{ editingSshPreset.id ? 'Редактировать пресет' : 'Новый пресет' }}
+            </h3>
+            <div class="form-group">
+                <label>Название</label>
+                <input v-model="editingSshPreset.name" placeholder="Название сервера">
+            </div>
+            <div class="form-group">
+                <label>SSH-команда</label>
+                <input v-model="editingSshPreset.command" placeholder="ssh -L 8080:localhost:8080 user@host -p 22">
+                <small style="color: var(--text-secondary); font-size: 11px; margin-top: 2px; display: block;">
+                    Формат: <code style="color: var(--accent);">ssh -L [локальный_порт]:localhost:[удалённый_порт] [пользователь]@[хост] -p [ssh_порт]</code>
+                </small>
+            </div>
+            <div class="form-group">
+                <label>URL API (через туннель)</label>
+                <input v-model="editingSshPreset.remote_api" placeholder="http://localhost:8080/v1/chat/completions">
+            </div>
+            <div class="form-group">
+                <label>Локальный порт</label>
+                <input v-model.number="editingSshPreset.tunnel_port" type="number" placeholder="8080">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showSshPresetModal = false">Отмена</button>
+                <button class="btn btn-primary" @click="saveSshPreset">Сохранить</button>
+            </div>
+
+            <hr style="border-color: var(--border); margin: 16px 0;">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="font-size: 13px; color: var(--text-secondary);">Ваши пресеты</h4>
+                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="newSshPreset">
+                    <i class="fas fa-plus"></i> Добавить
+                </button>
+            </div>
+            <div v-for="p in sshPresets" :key="p.id" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-primary); border-radius: 6px; margin-bottom: 4px;">
+                <div>
+                    <div style="font-size: 13px;">{{ p.name }}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); word-break: break-all;">{{ p.command }}</div>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" @click="editSshPreset(p)">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" @click="deleteSshPreset(p.id)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно профиля -->
+    <div class="modal-overlay" v-if="showProfileModal" @click.self="showProfileModal = false">
+        <div class="modal">
+            <h3>
+                <i class="fas fa-user-cog"></i>
+                {{ editingProfile.id ? 'Редактировать профиль' : 'Новый профиль' }}
+            </h3>
+            <div class="form-group">
+                <label>Название</label>
+                <input v-model="editingProfile.name" placeholder="Название профиля">
+            </div>
+            <div class="form-group">
+                <label>Системный промпт</label>
+                <textarea v-model="editingProfile.system_prompt" placeholder="Описание поведения нейросети..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showProfileModal = false">Отмена</button>
+                <button class="btn btn-primary" @click="saveProfile">Сохранить</button>
+            </div>
+
+            <hr style="border-color: var(--border); margin: 16px 0;">
+
+            <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">Ваши профили</h4>
+            <div v-for="p in profiles" :key="p.id" style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--bg-primary); border-radius: 6px; margin-bottom: 4px;">
+                <span style="font-size: 13px;">{{ p.name }}</span>
+                <div>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" @click="editProfile(p)">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" @click="deleteProfile(p.id)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+
+createApp({
+    setup() {
+        const conversations = ref([]);
+        const messages = ref([]);
+        const newMessage = ref('');
+        const currentConvId = ref(null);
+        const currentProfile = ref('default');
+        const isTyping = ref(false);
+        const messagesContainer = ref(null);
+
+        const sshPresets = ref([]);
+        const sshConnected = ref(false);
+        const selectedPreset = ref('');
+        const activePresetId = ref('');
+
+        // Вычисляемое имя активного пресета
+        const activePresetName = computed(() => {
+            const p = sshPresets.value.find(p => p.id === activePresetId.value);
+            return p ? p.name : '';
+        });
+
+        // Загружаем сохранённый пресет
+        const savedPreset = localStorage.getItem('openai_ssh_preset');
+        if (savedPreset) {
+            selectedPreset.value = savedPreset;
+        }
+
+        const profiles = ref([]);
+        const showProfileModal = ref(false);
+        const editingProfile = ref({ id: '', name: '', system_prompt: '' });
+
+        const showSshPresetModal = ref(false);
+        const editingSshPreset = ref({ id: '', name: '', command: '', remote_api: '', tunnel_port: null });
+
+        const api = (path, options = {}) =>
+            fetch('/api' + path, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options,
+            }).then(r => r.json());
+
+        // --- Загрузка данных ---
+        const loadConversations = () => api('/conversations').then(d => { conversations.value = d.conversations; });
+        const loadProfiles = () => api('/profiles').then(d => { profiles.value = d.profiles; });
+        const loadSSHStatus = () => api('/ssh/status').then(d => {
+            sshConnected.value = d.running;
+            sshPresets.value = d.presets;
+            if (d.presets.length > 0 && !selectedPreset.value) {
+                selectedPreset.value = d.presets[0].id;
+            }
+            // Запоминаем активный пресет
+            if (d.running && d.active_preset) {
+                activePresetId.value = d.active_preset;
+            }
+        });
+
+        // --- Диалоги ---
+        const newConversation = async () => {
+            const d = await api('/conversations', {
+                method: 'POST',
+                body: JSON.stringify({ profile_id: currentProfile.value }),
+            });
+            currentConvId.value = d.conversation_id;
+            messages.value = [];
+            await loadConversations();
+        };
+
+        const selectConversation = async (id) => {
+            currentConvId.value = id;
+            const d = await api(`/conversations/${id}`);
+            messages.value = d.messages;
+            nextTick(() => scrollToBottom());
+        };
+
+        const deleteConversation = async (id) => {
+            await api(`/conversations/${id}`, { method: 'DELETE' });
+            if (currentConvId.value === id) {
+                currentConvId.value = null;
+                messages.value = [];
+            }
+            await loadConversations();
+        };
+
+        // --- SSH ---
+        const toggleSSH = async () => {
+            if (sshConnected.value) {
+                await api('/ssh/stop', { method: 'POST' });
+                activePresetId.value = '';
+            } else {
+                await api('/ssh/start', {
+                    method: 'POST',
+                    body: JSON.stringify({ preset_id: selectedPreset.value }),
+                });
+                activePresetId.value = selectedPreset.value;
+            }
+            sshConnected.value = !sshConnected.value;
+            // Сохраняем выбор
+            localStorage.setItem('openai_ssh_preset', selectedPreset.value);
+        };
+
+        // Переключение пресета (переподключение)
+        const switchPreset = async () => {
+            if (!sshConnected.value) return;
+            const oldPreset = activePresetId.value;
+            const newPreset = selectedPreset.value;
+            if (oldPreset === newPreset) return;
+
+            // Останавливаем старый туннель
+            await api('/ssh/stop', { method: 'POST' });
+            sshConnected.value = false;
+
+            // Запускаем новый
+            await api('/ssh/start', {
+                method: 'POST',
+                body: JSON.stringify({ preset_id: newPreset }),
+            });
+            sshConnected.value = true;
+            activePresetId.value = newPreset;
+            localStorage.setItem('openai_ssh_preset', newPreset);
+        };
+
+        // --- Профили ---
+        const saveProfile = async () => {
+            const p = { ...editingProfile.value };
+            if (!p.id) p.id = 'profile_' + Date.now();
+            await api('/profiles', { method: 'POST', body: JSON.stringify(p) });
+            showProfileModal.value = false;
+            await loadProfiles();
+        };
+
+        const editProfile = (p) => {
+            editingProfile.value = { ...p };
+        };
+
+        const deleteProfile = async (id) => {
+            await api(`/profiles/${id}`, { method: 'DELETE' });
+            await loadProfiles();
+        };
+
+        // --- SSH-пресеты ---
+        const newSshPreset = () => {
+            editingSshPreset.value = { id: '', name: '', command: '', remote_api: '', tunnel_port: 8080 };
+        };
+
+        const editSshPreset = (p) => {
+            editingSshPreset.value = { ...p };
+        };
+
+        const saveSshPreset = async () => {
+            const p = { ...editingSshPreset.value };
+            if (!p.id) p.id = 'preset_' + Date.now();
+
+            if (p.id && sshPresets.value.some(s => s.id === p.id)) {
+                // Обновление
+                await api(`/ssh/presets/${p.id}`, { method: 'PUT', body: JSON.stringify(p) });
+            } else {
+                // Создание
+                await api('/ssh/presets', { method: 'POST', body: JSON.stringify(p) });
+            }
+            showSshPresetModal.value = false;
+            await loadSSHStatus();
+        };
+
+        const deleteSshPreset = async (id) => {
+            await api(`/ssh/presets/${id}`, { method: 'DELETE' });
+            await loadSSHStatus();
+        };
+
+        // --- Отправка сообщения ---
+        const sendMessage = async () => {
+            const text = newMessage.value.trim();
+            if (!text || isTyping.value) return;
+
+            messages.value.push({ id: 'u_' + Date.now(), role: 'user', content: text });
+            newMessage.value = '';
+            isTyping.value = true;
+
+            const assistantMsg = { id: 'a_' + Date.now(), role: 'assistant', content: '' };
+            messages.value.push(assistantMsg);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        conversation_id: currentConvId.value,
+                        profile_id: currentProfile.value,
+                    }),
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') break;
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.content) {
+                                        assistantMsg.content += parsed.content;
+                                    } else if (parsed.error) {
+                                        assistantMsg.content = parsed.error;
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                    }
+
+                    // Обрезаем лишние переносы строк в начале и конце ответа
+                    assistantMsg.content = assistantMsg.content.trim();
+
+                // Обновить название диалога
+                if (currentConvId.value && messages.value.filter(m => m.role === 'user').length === 1) {
+                    const title = text.slice(0, 50);
+                    await api(`/conversations/${currentConvId.value}/title?title=${encodeURIComponent(title)}`, {
+                        method: 'PUT',
+                    });
+                }
+
+                await loadConversations();
+            } catch (e) {
+                assistantMsg.content = 'Ошибка подключения к серверу';
+            } finally {
+                isTyping.value = false;
+                nextTick(() => scrollToBottom());
+            }
+        };
+
+        const scrollToBottom = () => {
+            if (messagesContainer.value) {
+                messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+            }
+        };
+
+        // Инициализация
+        onMounted(async () => {
+            await Promise.all([loadConversations(), loadProfiles(), loadSSHStatus()]);
+            if (profiles.value.length > 0) {
+                currentProfile.value = profiles.value[0].id;
+            }
+        });
+
+        return {
+            conversations, messages, newMessage, currentConvId, currentProfile,
+            isTyping, messagesContainer, sshPresets, sshConnected, selectedPreset, activePresetId,
+            profiles, showProfileModal, editingProfile,
+            showSshPresetModal, editingSshPreset,
+            newConversation, selectConversation, deleteConversation,
+            toggleSSH, switchPreset, sendMessage, saveProfile, editProfile, deleteProfile,
+            newSshPreset, editSshPreset, saveSshPreset, deleteSshPreset,
+        };
+    },
+}).mount('#app');
+</script>
+</body>
+</html>
