@@ -40,16 +40,23 @@ jobs:
       - name: Build with PyInstaller
         run: python build.py
 
+      - name: List dist contents
+        run: ls -la dist/
+
       - name: Package artifact
         run: |
           python -c "
           import shutil
-          import sys
+          import os
           format = '${{ matrix.archive_format }}'
+          name = '${{ matrix.artifact_name }}'
+          # PyInstaller creates a directory with the app name
+          src = os.path.join('dist', 'OpenAInterface')
           if format == 'zip':
-              shutil.make_archive('${{ matrix.artifact_name }}', 'zip', 'dist', 'OpenAInterface')
+              shutil.make_archive(name, 'zip', 'dist', 'OpenAInterface')
           else:
-              shutil.make_archive('${{ matrix.artifact_name }}', 'gztar', 'dist', 'OpenAInterface')
+              shutil.make_archive(name, 'gztar', 'dist', 'OpenAInterface')
+          print(f'Created: {name}.{format}')
           "
 
       - name: Upload artifact
