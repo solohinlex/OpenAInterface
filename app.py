@@ -24,7 +24,24 @@ from database import Database
 # Определяем, запущено ли из PyInstaller
 if getattr(sys, "frozen", False):
     # Запущено как собранный exe
-    APP_DIR = Path(sys.executable).parent
+    # 1. Для one-file builds: PyInstaller извлекает в sys._MEIPASS
+    if hasattr(sys, "_MEIPASS"):
+        meipass = Path(sys._MEIPASS)
+        if (meipass / "static").exists():
+            APP_DIR = meipass
+        else:
+            APP_DIR = Path(sys.executable).parent
+    else:
+        # 2. Для one-dir builds: static рядом с exe
+        base_dir = Path(sys.executable).parent
+        if (base_dir / "static").exists():
+            APP_DIR = base_dir
+        else:
+            internal = base_dir / "_internal"
+            if (internal / "static").exists():
+                APP_DIR = internal
+            else:
+                APP_DIR = base_dir
 else:
     APP_DIR = Path(__file__).parent
 
