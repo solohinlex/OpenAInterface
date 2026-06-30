@@ -41,18 +41,20 @@ jobs:
         run: python build.py
 
       - name: Package artifact
-        shell: bash
         run: |
-          cd dist
-          if [ "${{ matrix.archive_format }}" = "zip" ]; then
-            7z a "${{ matrix.artifact_name }}.zip" OpenAInterface/
-          else
-            tar -czf "${{ matrix.artifact_name }}.tar.gz" OpenAInterface/
-          fi
+          python -c "
+          import shutil
+          import sys
+          format = '${{ matrix.archive_format }}'
+          if format == 'zip':
+              shutil.make_archive('${{ matrix.artifact_name }}', 'zip', 'dist', 'OpenAInterface')
+          else:
+              shutil.make_archive('${{ matrix.artifact_name }}', 'gztar', 'dist', 'OpenAInterface')
+          "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: dist/${{ matrix.artifact_name }}.${{ matrix.archive_format }}
+          path: ${{ matrix.artifact_name }}.${{ matrix.archive_format }}
           retention-days: 90
