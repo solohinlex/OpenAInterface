@@ -15,6 +15,9 @@ from pathlib import Path
 
 
 def build():
+    # UPX не поддерживает macOS (Mach-O), отключаем его
+    upx_enabled = platform.system() != "Darwin"
+
     spec_content = """
 # -*- mode: python ; coding: utf-8 -*-
 
@@ -60,7 +63,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=""" + str(upx_enabled) + """,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,

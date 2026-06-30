@@ -1,6 +1,6 @@
 # OpenAInterface
 
-Локальный интерфейс для работы с нейросетью на Spark-кластере.
+Локальный интерфейс для работы с нейросетью на кластере.
 
 ## Для пользователей
 
@@ -72,9 +72,9 @@ python app.py
 {
   "presets": [
     {
-      "id": "spark_main",
-      "name": "Spark-кластер (основной)",
-      "command": "ssh -L 8080:localhost:8080 user@spark-host -p 22",
+      "id": "main",
+      "name": "Кластер (основной)",
+      "command": "ssh -L 8080:localhost:8080 user@main-host -p 22",
       "remote_api": "http://localhost:8080/v1/chat/completions",
       "tunnel_port": 8080
     }
